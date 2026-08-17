@@ -1,0 +1,32 @@
+# The full FreelanceForge stack: API + Postgres. `docker compose up` runs both.
+services:
+  api:
+    build: .                      # build from the Dockerfile in this directory
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      VAT_RATE: "0.15"
+      DATABASE_URL: postgresql://forge:forge@db:5432/freelanceforge  # 'db' = service name
+    depends_on:
+      db:
+        condition: service_healthy   # wait until Postgres passes its healthcheck
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: forge
+      POSTGRES_PASSWORD: forge
+      POSTGRES_DB: freelanceforge
+    volumes:
+      - dbdata:/var/lib/postgresql/data   # named volume => data survives restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forge -d freelanceforge"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  dbdata:
